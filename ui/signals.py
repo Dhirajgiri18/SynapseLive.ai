@@ -5,5 +5,6 @@ class OverlaySignals(QObject):
     transcript_received = Signal(str, str)
     cue_received = Signal(str)
     status_changed = Signal(str)
+    summary_status = Signal(str)
     saving_changed = Signal(bool)
     quota_alert = Signal(str)

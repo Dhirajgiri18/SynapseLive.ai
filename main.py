@@ -1,7 +1,8 @@
+import signal
 import sys
 import threading
 
-from PySide6.QtCore import QLockFile
+from PySide6.QtCore import QLockFile, QTimer
 from PySide6.QtWidgets import QApplication
 
 import config
@@ -15,9 +16,18 @@ from ui.overlay import SynapseOverlay
 from ui.signals import OverlaySignals
 
 
+def _install_sigint_handler(application: QApplication) -> QTimer:
+    signal.signal(signal.SIGINT, lambda *_: application.quit())
+    timer = QTimer()
+    timer.timeout.connect(lambda: None)
+    timer.start(250)
+    return timer
+
+
 def _run_application() -> int:
     application = QApplication(sys.argv)
     application.setApplicationName("SynapseLive.ai")
+    sigint_timer = _install_sigint_handler(application)
     signals = OverlaySignals()
     state = MeetingState()
 
@@ -68,11 +78,15 @@ def _run_application() -> int:
                 if output_path is None:
                     message = "Transcript too short to summarize."
                     print(f"[SynapseLive] {message}", flush=True)
-                    signals.status_changed.emit(message)
+                    signals.summary_status.emit(message)
                     return
+                if output_path.name.startswith("meeting_raw_"):
+                    print(f"[SynapseLive] Raw transcript saved: {output_path}", flush=True)
+                    return
+                state.clear()
                 message = f"Saved notes: {output_path}"
                 print(f"[SynapseLive] {message}", flush=True)
-                signals.status_changed.emit("Notes saved")
+                signals.summary_status.emit("Notes saved")
             except Exception as error:
                 message = f"Could not save notes: {error}"
                 report_error(message)
@@ -82,7 +96,11 @@ def _run_application() -> int:
 
         threading.Thread(target=save_worker, daemon=True, name="meeting-save").start()
 
-    overlay = SynapseOverlay(signals, on_end_call=save_meeting)
+    overlay = SynapseOverlay(
+        signals,
+        on_end_call=save_meeting,
+        has_unsaved=lambda: bool(state.snapshot()),
+    )
 
     def shutdown() -> None:
         audio.stop()

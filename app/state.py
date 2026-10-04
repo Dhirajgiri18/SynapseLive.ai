@@ -25,6 +25,10 @@ class MeetingState:
         with self._lock:
             return list(self._entries)
 
+    def clear(self) -> None:
+        with self._lock:
+            self._entries.clear()
+
     def transcript_text(self) -> str:
         return "\n".join(
             f"[{entry.timestamp:%H:%M:%S}] {entry.speaker}: {entry.text}"
