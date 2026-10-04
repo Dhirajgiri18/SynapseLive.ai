@@ -6,3 +6,4 @@ class OverlaySignals(QObject):
     cue_received = Signal(str)
     status_changed = Signal(str)
     saving_changed = Signal(bool)
+    quota_alert = Signal(str)

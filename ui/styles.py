@@ -54,3 +54,8 @@ QPushButton#close:hover {
     color: #ffffff;
 }
 """
+
+ALERT_STYLESHEET = (
+    "color: #FFB4A9; font-weight: bold; font-size: 12px; "
+    "background-color: rgba(255, 82, 82, 0.15); padding: 8px; border-radius: 6px;"
+)

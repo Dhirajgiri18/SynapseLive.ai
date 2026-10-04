@@ -1,8 +1,10 @@
 import sys
 import threading
 
+from PySide6.QtCore import QLockFile
 from PySide6.QtWidgets import QApplication
 
+import config
 from app.audio import AudioCaptureEngine
 from app.copilot import LiveCopilot
 from app.rag_engine import LocalRAG
@@ -13,7 +15,7 @@ from ui.overlay import SynapseOverlay
 from ui.signals import OverlaySignals
 
 
-def main() -> int:
+def _run_application() -> int:
     application = QApplication(sys.argv)
     application.setApplicationName("SynapseLive.ai")
     signals = OverlaySignals()
@@ -26,7 +28,11 @@ def main() -> int:
     print("[SynapseLive] Initializing local knowledge base...", flush=True)
     rag = LocalRAG()
     rag.ingest_directory()
-    copilot = LiveCopilot(rag, on_error=report_error)
+    copilot = LiveCopilot(
+        rag,
+        on_error=report_error,
+        on_quota=signals.quota_alert.emit,
+    )
 
     def show_transcript(entry) -> None:
         print(f"{entry.speaker}: {entry.text}", flush=True)
@@ -55,7 +61,15 @@ def main() -> int:
             try:
                 audio.stop()
                 transcriber.stop()
-                output_path = summarize_and_save(state)
+                output_path = summarize_and_save(
+                    state,
+                    on_quota=signals.quota_alert.emit,
+                )
+                if output_path is None:
+                    message = "Transcript too short to summarize."
+                    print(f"[SynapseLive] {message}", flush=True)
+                    signals.status_changed.emit(message)
+                    return
                 message = f"Saved notes: {output_path}"
                 print(f"[SynapseLive] {message}", flush=True)
                 signals.status_changed.emit("Notes saved")
@@ -84,6 +98,19 @@ def main() -> int:
 
     overlay.show()
     return application.exec()
+
+
+def main() -> int:
+    config.DATA_DIR.mkdir(parents=True, exist_ok=True)
+    lock = QLockFile(str(config.DATA_DIR / "synapselive.lock"))
+    if not lock.tryLock(100):
+        print("SynapseLive is already running. Close the other instance first.", flush=True)
+        return 1
+
+    try:
+        return _run_application()
+    finally:
+        lock.unlock()
 
 
 if __name__ == "__main__":

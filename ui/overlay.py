@@ -1,3 +1,4 @@
+import html
 from collections.abc import Callable
 
 from PySide6.QtCore import Qt
@@ -11,8 +12,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+import config
 from ui.signals import OverlaySignals
-from ui.styles import OVERLAY_STYLESHEET
+from ui.styles import ALERT_STYLESHEET, OVERLAY_STYLESHEET
 
 
 class SynapseOverlay(QWidget):
@@ -52,6 +54,7 @@ class SynapseOverlay(QWidget):
         self.cue = QLabel("Listening for useful context…")
         self.cue.setObjectName("cue")
         self.cue.setWordWrap(True)
+        self.cue.setOpenExternalLinks(False)
         root.addWidget(self.cue)
 
         self.transcript = QPlainTextEdit()
@@ -68,6 +71,7 @@ class SynapseOverlay(QWidget):
         signals.cue_received.connect(self.show_cue)
         signals.status_changed.connect(self.set_status)
         signals.saving_changed.connect(self.set_saving)
+        signals.quota_alert.connect(self.display_quota_alert)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
@@ -82,7 +86,21 @@ class SynapseOverlay(QWidget):
         scrollbar.setValue(scrollbar.maximum())
 
     def show_cue(self, text: str) -> None:
+        self.cue.setTextFormat(Qt.TextFormat.PlainText)
+        self.cue.setOpenExternalLinks(False)
+        self.cue.setStyleSheet("")
         self.cue.setText(text)
+
+    def display_quota_alert(self, message: str) -> None:
+        plans_url = html.escape(config.PLANS_URL, quote=True)
+        self.cue.setTextFormat(Qt.TextFormat.RichText)
+        self.cue.setOpenExternalLinks(True)
+        self.cue.setStyleSheet(ALERT_STYLESHEET)
+        self.cue.setText(
+            f"{html.escape(message)} "
+            f'<a href="{plans_url}" style="color:#68d7d0;">View plans</a>'
+        )
+        self.save_button.setEnabled(True)
 
     def set_status(self, text: str) -> None:
         self.status.setText(text)
