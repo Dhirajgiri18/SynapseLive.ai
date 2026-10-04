@@ -1,0 +1,5 @@
+SynapseLive.ai is a local-first live meeting assistant for Windows. It captures microphone audio for [You] and speaker loopback audio for [Speaker]. The overlay displays the transcript and concise meeting cues while the conversation is in progress.
+
+Speech recognition uses Faster-Whisper on the local machine. Audio capture uses the default microphone and the default speaker's loopback device. Speech text is kept in memory during the meeting and can be saved as a Markdown meeting note when the user ends the call.
+
+The project indexes TXT, Markdown, and PDF documents from docs/ with sentence-transformer embeddings stored in a local LanceDB database. Gemini generates concise response cues using the transcript line and any retrieved project context. A Gemini API key is read from the ignored local_secrets.py file.

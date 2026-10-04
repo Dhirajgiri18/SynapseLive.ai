@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+/local_secrets.py
+data/*
+!data/.gitkeep
+notes/*.md

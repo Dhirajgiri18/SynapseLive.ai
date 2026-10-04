@@ -1,0 +1,10 @@
+PySide6
+soundcard
+numpy
+scipy
+faster-whisper
+google-genai
+lancedb
+pandas
+sentence-transformers
+pypdf
